@@ -10,7 +10,7 @@ Supports **single-send** and **batch mode**, with colored logs and automatic CSV
 - Windows PC with PowerShell + WinForms  
 - Place these files in the same directory:
   - `solution_transfer_manual_gui.ps1`
-  - `solution_donation_manual_gui.bat`
+  - `solution_donation.bat`
   - `cardano-signer.exe`
 - If PowerShell blocks execution:
   ```powershell
