@@ -1,7 +1,7 @@
 # 🧰 Scavenger Donation Manager (GUI)
 
 A lightweight Windows GUI tool for **signing and submitting Scavenger donations** using Midnight’s official API.  
-Supports **single-send** and **batch mode**, with colored logs and automatic CSV/TXT export.
+Supports **single-send** and **batch mode**
 
 ---
 
