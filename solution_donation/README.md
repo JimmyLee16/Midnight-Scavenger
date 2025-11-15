@@ -22,7 +22,8 @@ B. Directly via ps1 file
 
 powershell
 Copy code
-```powershell -ExecutionPolicy Bypass -File .\solution_transfer_manual_gui.ps1
+```powershell
+ -ExecutionPolicy Bypass -File .\solution_transfer_manual_gui.ps1
 ```
 
 ## 🖥️ Features
