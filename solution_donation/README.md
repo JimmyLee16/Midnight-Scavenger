@@ -15,8 +15,11 @@ Supports **single-send** and **batch mode**
 - If PowerShell blocks execution:
   ```powershell
   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-⚙️ How to Run
+
+##⚙️ How to Run
+
 Launch the GUI
+First: open file .ps1 and save as format UTF-8 With BOM
 A. Just click solution_donation_manual_gui.bat
 B. Directly via ps1 file
 
