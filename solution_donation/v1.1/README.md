@@ -2,9 +2,9 @@ Hướng dẫn sử dụng nhanh
 
 Download 3 cộng cụ cardano
 
-Cardano address source https://github.com/IntersectMBO/cardano-addresses/releases
-Cardano cli source https://github.com/IntersectMBO/cardano-cli/releases
-cardano-signer.exesource (https://github.com/gitmachtl/cardano-signer/releases/tag/v1.32.0)
+- Cardano address source https://github.com/IntersectMBO/cardano-addresses/releases
+- Cardano cli source https://github.com/IntersectMBO/cardano-cli/releases
+- Cardano-signer.exesource (https://github.com/gitmachtl/cardano-signer/releases/tag/v1.32.0)
 
 Download các file ps1
 
