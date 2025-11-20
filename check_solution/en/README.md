@@ -11,7 +11,7 @@ Supports two input methods — manual entry or importing from a `.csv` file.
 1. Download **2 files**: `Checksolution_gui(en).ps1` and `checker.bat` (you can rename them, but make sure to update the `.ps1` filename inside the `.bat` file accordingly, e.g. `check_addresses.ps1` and `run_check.bat`).  
 2. Place both files in the **same directory**.
 3. Open file by Notepad Checksolution_gui(en).ps1 => save as "UTF-8 with BOM"
-
+4. In case people want to save the file using your own custom name, simply edit the code inside the .bat file to match the .ps1 filename you have chosen.
 ---
 
 ## ⚙️ How to Use
