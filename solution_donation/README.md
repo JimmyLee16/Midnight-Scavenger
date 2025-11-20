@@ -65,9 +65,9 @@ Invalid file paths / malformed list
 🔮 Roadmap
 v1.0 — Stable GUI — Done
 
-v1.1 — Auto-resize log panel — Planned
+v1.1 — Auto & manual load address & skey from recovery phrase
 
-v1.2 — Custom API endpoint — Planned
+v1.3 — Create multi internal, external address features
 
 ⚖️ Disclaimer
 This tool is provided to the community as-is, without warranty.
