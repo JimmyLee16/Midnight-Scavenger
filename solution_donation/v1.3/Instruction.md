@@ -9,4 +9,4 @@ Download các file ps1
 
 Đặt chung 1 thư mục Chạy file .bat
 
-Lưu ý: Các file .ps1 cần save as with BOM
+Lưu ý: Các file .ps1 cần save as UTF-8 with BOM
