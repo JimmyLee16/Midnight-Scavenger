@@ -30,7 +30,7 @@ $Text = @{
         BatchLabel = "📦 Batches: {0}"
         CopyButton = "📋 Copy Results"
         ClearButton = "🗑️ Clear"
-        SaveButton = "💾 Save XLSX"
+        SaveButton = "💾 Save Address"
         HistoryButton = "📖 View History"
         BtnLang = "🌐 Language"
         LangSwitch = "Switched to Vietnamese 🇻🇳"
@@ -70,6 +70,17 @@ $Text = @{
     }
 }
 
+# --------- TRADEMARK / ATTRIBUTION ---------
+$TrademarkFull = @{
+    EN = "This product is made for community use.`nAuthor: Jimmy Lee`nSource: https://github.com/JimmyLee16/Midnight-Scavenger/tree/main/Night_claim_management`nContact: https://t.me/ADA_VIET"
+    VN = "Đây là sản phẩm làm vì mục đích phục vụ cộng đồng.`nTác giả: Jimmy Lee`nSource: https://github.com/JimmyLee16/Midnight-Scavenger/tree/main/Night_claim_management`nLiên hệ: https://t.me/ADA_VIET"
+}
+
+$TrademarkShort = @{
+    EN = "© Jimmy Lee — community tool"
+    VN = "© Jimmy Lee — công cụ cộng đồng"
+}
+
 # --------- GLOBAL VARIABLES ---------
 $global:currentScheduleData = $null
 $global:currentAddress = ""
@@ -78,11 +89,11 @@ $global:excelFilePath = ""
 # --------- MAIN FORM ---------
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $Text[$Lang].Title
-$form.Size = New-Object System.Drawing.Size(800, 700)
+$form.Size = New-Object System.Drawing.Size(900, 700)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = $bgColor
-$form.FormBorderStyle = 'FixedDialog'
-$form.MaximizeBox = $false
+$form.FormBorderStyle = 'Sizable'
+$form.MaximizeBox = $true
 $form.Icon = $null
 
 # --------- TITLE ---------
@@ -97,14 +108,32 @@ $form.Controls.Add($lblTitle)
 # --------- LANGUAGE BUTTON ---------
 $btnLang = New-Object System.Windows.Forms.Button
 $btnLang.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$btnLang.Size = New-Object System.Drawing.Size(100, 32)
-$btnLang.Location = New-Object System.Drawing.Point(700, 15)
+$btnLang.Size = New-Object System.Drawing.Size(50, 32)
+$btnLang.Location = New-Object System.Drawing.Point(650, 15)
 $btnLang.BackColor = [System.Drawing.Color]::White
 $btnLang.ForeColor = $textColor
 $btnLang.FlatStyle = 'Flat'
 $btnLang.FlatAppearance.BorderSize = 1
 $btnLang.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnLang.Text = "🌐"
 $form.Controls.Add($btnLang)
+
+# --------- LANGUAGE SELECT COMBO (visible) ---------
+$cmbLang = New-Object System.Windows.Forms.ComboBox
+$cmbLang.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$cmbLang.Size = New-Object System.Drawing.Size(80, 32)
+$cmbLang.Location = New-Object System.Drawing.Point(710, 15)
+$cmbLang.DropDownStyle = 'DropDownList'
+$cmbLang.Items.AddRange(@("EN","VN")) | Out-Null
+$cmbLang.SelectedItem = $Lang
+$cmbLang.Cursor = [System.Windows.Forms.Cursors]::Hand
+$form.Controls.Add($cmbLang)
+$cmbLang.Add_SelectedIndexChanged({
+    if ($cmbLang.SelectedItem -ne $null) {
+        $Lang = $cmbLang.SelectedItem.ToString()
+        Update-Language
+    }
+})
 
 # --------- ADDRESS INPUT SECTION ---------
 $lblAddress = New-Object System.Windows.Forms.Label
@@ -168,8 +197,8 @@ $btnClear.Add_MouseLeave({ $btnClear.BackColor = [System.Drawing.Color]::Gray })
 # --------- SAVE BUTTON ---------
 $btnSave = New-Object System.Windows.Forms.Button
 $btnSave.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$btnSave.Size = New-Object System.Drawing.Size(155, 45)
-$btnSave.Location = New-Object System.Drawing.Point(25, 595)
+$btnSave.Size = New-Object System.Drawing.Size(130, 45)
+$btnSave.Location = New-Object System.Drawing.Point(25, 625)
 $btnSave.BackColor = [System.Drawing.Color]::FromArgb(102, 51, 153)
 $btnSave.ForeColor = [System.Drawing.Color]::White
 $btnSave.FlatStyle = 'Flat'
@@ -180,11 +209,25 @@ $form.Controls.Add($btnSave)
 $btnSave.Add_MouseEnter({ if ($btnSave.Enabled) { $btnSave.BackColor = [System.Drawing.Color]::FromArgb(80, 30, 130) } })
 $btnSave.Add_MouseLeave({ if ($btnSave.Enabled) { $btnSave.BackColor = [System.Drawing.Color]::FromArgb(102, 51, 153) } })
 
+# --------- GO TO MAINSITE BUTTON ---------
+$btnGoToSite = New-Object System.Windows.Forms.Button
+$btnGoToSite.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+$btnGoToSite.Size = New-Object System.Drawing.Size(145, 45)
+$btnGoToSite.Location = New-Object System.Drawing.Point(165, 625)
+$btnGoToSite.BackColor = [System.Drawing.Color]::FromArgb(255, 102, 0)
+$btnGoToSite.ForeColor = [System.Drawing.Color]::White
+$btnGoToSite.FlatStyle = 'Flat'
+$btnGoToSite.FlatAppearance.BorderSize = 0
+$btnGoToSite.Cursor = [System.Windows.Forms.Cursors]::Hand
+$form.Controls.Add($btnGoToSite)
+$btnGoToSite.Add_MouseEnter({ $btnGoToSite.BackColor = [System.Drawing.Color]::FromArgb(230, 80, 0) })
+$btnGoToSite.Add_MouseLeave({ $btnGoToSite.BackColor = [System.Drawing.Color]::FromArgb(255, 102, 0) })
+
 # --------- HISTORY BUTTON ---------
 $btnHistory = New-Object System.Windows.Forms.Button
 $btnHistory.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$btnHistory.Size = New-Object System.Drawing.Size(170, 45)
-$btnHistory.Location = New-Object System.Drawing.Point(200, 595)
+$btnHistory.Size = New-Object System.Drawing.Size(140, 45)
+$btnHistory.Location = New-Object System.Drawing.Point(320, 625)
 $btnHistory.BackColor = [System.Drawing.Color]::FromArgb(0, 102, 204)
 $btnHistory.ForeColor = [System.Drawing.Color]::White
 $btnHistory.FlatStyle = 'Flat'
@@ -197,8 +240,8 @@ $btnHistory.Add_MouseLeave({ $btnHistory.BackColor = [System.Drawing.Color]::Fro
 # --------- VIEW ALL BUTTON ---------
 $btnViewAll = New-Object System.Windows.Forms.Button
 $btnViewAll.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$btnViewAll.Size = New-Object System.Drawing.Size(170, 45)
-$btnViewAll.Location = New-Object System.Drawing.Point(390, 595)
+$btnViewAll.Size = New-Object System.Drawing.Size(140, 45)
+$btnViewAll.Location = New-Object System.Drawing.Point(470, 625)
 $btnViewAll.BackColor = [System.Drawing.Color]::FromArgb(220, 53, 69)
 $btnViewAll.ForeColor = [System.Drawing.Color]::White
 $btnViewAll.FlatStyle = 'Flat'
@@ -224,10 +267,76 @@ $panelResults.Location = New-Object System.Drawing.Point(25, 235)
 $panelResults.BackColor = $panelColor
 $panelResults.BorderStyle = 'FixedSingle'
 $panelResults.AutoScroll = $true
+$panelResults.Visible = $true
 $form.Controls.Add($panelResults)
 
+# --------- CHECKBOX LIST FOR BATCH CHECK ---------
+$checkedListBox = New-Object System.Windows.Forms.CheckedListBox
+$checkedListBox.Size = New-Object System.Drawing.Size(750, 340)
+$checkedListBox.Location = New-Object System.Drawing.Point(25, 235)
+$checkedListBox.BackColor = $panelColor
+$checkedListBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+$checkedListBox.BorderStyle = 'FixedSingle'
+$checkedListBox.Visible = $false
+$form.Controls.Add($checkedListBox)
+$form.Controls.SetChildIndex($checkedListBox, 0)
+
+# --------- BATCH CHECK BUTTONS PANEL ---------
+$panelBatchButtons = New-Object System.Windows.Forms.Panel
+$panelBatchButtons.Size = New-Object System.Drawing.Size(750, 60)
+$panelBatchButtons.Location = New-Object System.Drawing.Point(25, 585)
+$panelBatchButtons.BackColor = $panelColor
+$panelBatchButtons.BorderStyle = 'FixedSingle'
+$panelBatchButtons.Visible = $false
+$form.Controls.Add($panelBatchButtons)
+$form.Controls.SetChildIndex($panelBatchButtons, 0)
+
+$btnSelectAll = New-Object System.Windows.Forms.Button
+$btnSelectAll.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$btnSelectAll.Size = New-Object System.Drawing.Size(110, 38)
+$btnSelectAll.Location = New-Object System.Drawing.Point(10, 10)
+$btnSelectAll.BackColor = [System.Drawing.Color]::FromArgb(40, 167, 69)
+$btnSelectAll.ForeColor = [System.Drawing.Color]::White
+$btnSelectAll.FlatStyle = 'Flat'
+$btnSelectAll.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnSelectAll.Text = if ($Lang -eq "EN") { "✓ Select All" } else { "✓ Chọn Tất Cả" }
+$panelBatchButtons.Controls.Add($btnSelectAll)
+
+$btnDeselectAll = New-Object System.Windows.Forms.Button
+$btnDeselectAll.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$btnDeselectAll.Size = New-Object System.Drawing.Size(130, 38)
+$btnDeselectAll.Location = New-Object System.Drawing.Point(125, 10)
+$btnDeselectAll.BackColor = [System.Drawing.Color]::Gray
+$btnDeselectAll.ForeColor = [System.Drawing.Color]::White
+$btnDeselectAll.FlatStyle = 'Flat'
+$btnDeselectAll.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnDeselectAll.Text = if ($Lang -eq "EN") { "✗ Deselect All" } else { "✗ Bỏ Chọn Tất Cả" }
+$panelBatchButtons.Controls.Add($btnDeselectAll)
+
+$btnCheckSelected = New-Object System.Windows.Forms.Button
+$btnCheckSelected.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$btnCheckSelected.Size = New-Object System.Drawing.Size(140, 38)
+$btnCheckSelected.Location = New-Object System.Drawing.Point(600, 10)
+$btnCheckSelected.BackColor = $primaryColor
+$btnCheckSelected.ForeColor = [System.Drawing.Color]::White
+$btnCheckSelected.FlatStyle = 'Flat'
+$btnCheckSelected.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnCheckSelected.Text = if ($Lang -eq "EN") { "🔍 Check Selected" } else { "🔍 Kiểm Tra" }
+$panelBatchButtons.Controls.Add($btnCheckSelected)
+
+$btnBackFromBatch = New-Object System.Windows.Forms.Button
+$btnBackFromBatch.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$btnBackFromBatch.Size = New-Object System.Drawing.Size(90, 38)
+$btnBackFromBatch.Location = New-Object System.Drawing.Point(745, 10)
+$btnBackFromBatch.BackColor = [System.Drawing.Color]::Gray
+$btnBackFromBatch.ForeColor = [System.Drawing.Color]::White
+$btnBackFromBatch.FlatStyle = 'Flat'
+$btnBackFromBatch.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnBackFromBatch.Text = if ($Lang -eq "EN") { "← Back" } else { "← Quay Lại" }
+$panelBatchButtons.Controls.Add($btnBackFromBatch)
+
 # --------- UPDATE FORM SIZE ---------
-$form.Size = New-Object System.Drawing.Size(800, 740)
+$form.Size = New-Object System.Drawing.Size(900, 700)
 
 # --------- UPDATE LANGUAGE FUNCTION ---------
 function Update-Language {
@@ -238,6 +347,7 @@ function Update-Language {
     $btnCopy.Text = $Text[$Lang].CopyButton
     $btnClear.Text = $Text[$Lang].ClearButton
     $btnSave.Text = $Text[$Lang].SaveButton
+    $btnGoToSite.Text = if ($Lang -eq "EN") { "🌐 Go to Site" } else { "🌐 Đến Trang" }
     $btnHistory.Text = $Text[$Lang].HistoryButton
     $btnViewAll.Text = $Text[$Lang].ViewAllButton
     $btnLang.Text = $Text[$Lang].BtnLang
@@ -273,7 +383,7 @@ $btnCopy.Add_Click({
     }
     $clipboardText = $content -join "`n"
     [System.Windows.Forms.Clipboard]::SetText($clipboardText)
-    [System.Windows.Forms.MessageBox]::Show($Text[$Lang].Success, "Info", "OK", "Information")
+    [System.Windows.Forms.MessageBox]::Show($Text[$Lang].Success + "`n`n" + $TrademarkFull[$Lang], "Info", "OK", "Information")
 })
 
 # --------- CHECK BUTTON EVENT ---------
@@ -281,7 +391,7 @@ $btnCheck.Add_Click({
     $address = $txtAddress.Text.Trim()
     
     if ([string]::IsNullOrWhiteSpace($address)) {
-        [System.Windows.Forms.MessageBox]::Show($Text[$Lang].InvalidAddress, "Error", "OK", "Error")
+        [System.Windows.Forms.MessageBox]::Show($Text[$Lang].InvalidAddress + "`n`n" + $TrademarkFull[$Lang], "Error", "OK", "Error")
         return
     }
 
@@ -331,6 +441,11 @@ $btnCheck.Add_Click({
             $dt = $dt.AddHours(7)
             $VNDate = $dt.ToString("yyyy-MM-dd HH:mm:ss")
 
+            # Calculate days until thaw
+            $thawDateTime = [DateTime]::Parse($item.thawing_period_start)
+            $daysUntil = ($thawDateTime - [DateTime]::UtcNow).Days
+            if ($daysUntil -lt 0) { $daysUntil = 0 }
+
             # Batch number and amount
             $lblBatch = New-Object System.Windows.Forms.Label
             $lblBatch.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
@@ -340,6 +455,18 @@ $btnCheck.Add_Click({
             $lblBatch.Location = New-Object System.Drawing.Point(10, $yPosition)
             $panelResults.Controls.Add($lblBatch)
             $yPosition += 25
+
+            # Status and countdown (use local label to avoid clobbering global `$lblStatus`)
+            $statusText = if ($item.status -eq "upcoming") { "Unclaimed" } else { "Claimed" }
+            $countdownText = if ($item.status -eq "upcoming") { " | In $daysUntil days" } else { "" }
+            $lblBatchStatus = New-Object System.Windows.Forms.Label
+            $lblBatchStatus.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+            $lblBatchStatus.ForeColor = if ($item.status -eq "upcoming") { $warningColor } else { $successColor }
+            $lblBatchStatus.Text = "   🔔 $statusText$countdownText"
+            $lblBatchStatus.Size = New-Object System.Drawing.Size(730, 18)
+            $lblBatchStatus.Location = New-Object System.Drawing.Point(20, $yPosition)
+            $panelResults.Controls.Add($lblBatchStatus)
+            $yPosition += 20
 
             # Date and time
             $lblDate = New-Object System.Windows.Forms.Label
@@ -387,7 +514,7 @@ $btnCheck.Add_Click({
         # Update panel layout
         $panelResults.AutoScrollPosition = New-Object System.Drawing.Point(0, 0)
 
-        $lblStatus.Text = $Text[$Lang].Success
+        $lblStatus.Text = $Text[$Lang].Success + " - " + $TrademarkShort[$Lang]
         $lblStatus.ForeColor = $successColor
         $btnCopy.Enabled = $true
         $btnSave.Enabled = $true
@@ -405,33 +532,90 @@ $btnCheck.Add_Click({
     $btnCheck.Enabled = $true
 })
 
+# --------- GET JSON FILE PATH ---------
+function Get-JsonFilePath {
+    $scriptPath = Split-Path -Parent $MyInvocation.ScriptName
+    if ([string]::IsNullOrEmpty($scriptPath)) {
+        $scriptPath = Get-Location
+    }
+    return [System.IO.Path]::Combine($scriptPath, "NIGHT_addresses.json")
+}
+
 # --------- SAVE TO JSON FUNCTION ---------
 function Save-ToJson($addresses) {
     try {
-        # Create data structure
-        $data = @{
-            CreatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-            Addresses = $addresses | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() }
+        $filePath = Get-JsonFilePath
+
+        # Read existing addresses if file exists (raw)
+        $existingRaw = @()
+        if (Test-Path $filePath) {
+            try {
+                $existingJson = Get-Content -Path $filePath -Encoding UTF8 | ConvertFrom-Json
+                if ($null -ne $existingJson.Addresses) {
+                    if ($existingJson.Addresses -is [array]) {
+                        $existingRaw = $existingJson.Addresses
+                    } else {
+                        $existingRaw = @($existingJson.Addresses)
+                    }
+                }
+            } catch {
+                # If file is corrupted, start fresh
+                $existingRaw = @()
+            }
         }
-        
-        # Convert to JSON
+
+        # Helper: extract plain address string from possible nested shapes
+        function Get-AddrString($obj) {
+            if ($null -eq $obj) { return "" }
+            if ($obj -is [PSCustomObject]) {
+                if ($obj.PSObject.Properties.Name -contains 'address') {
+                    return Get-AddrString $obj.address
+                } elseif ($obj.PSObject.Properties.Name -contains 'Address') {
+                    return Get-AddrString $obj.Address
+                } else {
+                    return ($obj | ConvertTo-Json -Compress)
+                }
+            } else {
+                return $obj.ToString()
+            }
+        }
+
+        # Normalize existing addresses into plain strings (deduplicated)
+        $existingAddresses = @()
+        foreach ($e in $existingRaw) {
+            $s = Get-AddrString $e
+            if (-not [string]::IsNullOrWhiteSpace($s) -and ($s -notin $existingAddresses)) {
+                $existingAddresses += $s
+            }
+        }
+
+        # Add new addresses (avoid duplicates)
+        foreach ($addr in $addresses) {
+            $trimAddr = $addr.ToString().Trim()
+            if (-not [string]::IsNullOrWhiteSpace($trimAddr)) {
+                if ($trimAddr -notin $existingAddresses) {
+                    $existingAddresses += $trimAddr
+                }
+            }
+        }
+
+        # Create data structure with array of address objects (consistent shape)
+        $addressObjects = @()
+        $idx = 1
+        foreach ($addr in $existingAddresses) {
+            $addressObjects += @{ "id" = $idx; "address" = $addr }
+            $idx++
+        }
+
+        $data = @{ "CreatedAt" = (Get-Date -Format "yyyy-MM-dd HH:mm:ss"); "Addresses" = $addressObjects }
+
+        # Convert to JSON and save
         $jsonContent = $data | ConvertTo-Json -Depth 10
-        
-        # Save file
-        $docFolder = [System.IO.Path]::Combine([System.Environment]::GetFolderPath("MyDocuments"), "NIGHT_Schedules")
-        if (-not (Test-Path $docFolder)) {
-            New-Item -ItemType Directory -Path $docFolder -Force | Out-Null
-        }
-        
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-        $fileName = "NIGHT_Addresses_$timestamp.json"
-        $filePath = [System.IO.Path]::Combine($docFolder, $fileName)
-        
         $jsonContent | Out-File -FilePath $filePath -Encoding UTF8 -Force
-        
+
         $global:excelFilePath = $filePath
         return $filePath
-        
+
     } catch {
         throw $_
     }
@@ -440,7 +624,7 @@ function Save-ToJson($addresses) {
 # --------- SAVE BUTTON EVENT ---------
 $btnSave.Add_Click({
     if ([string]::IsNullOrWhiteSpace($global:currentAddress)) {
-        [System.Windows.Forms.MessageBox]::Show("No data to save!", "Warning", "OK", "Warning")
+        [System.Windows.Forms.MessageBox]::Show("No data to save!" + "`n`n" + $TrademarkFull[$Lang], "Warning", "OK", "Warning")
         return
     }
     
@@ -454,13 +638,13 @@ $btnSave.Add_Click({
         
         try {
             $filePath = Save-ToJson -addresses @($global:currentAddress)
-            $lblStatus.Text = [string]::Format($Text[$Lang].SaveSuccess, (Split-Path $filePath -Leaf))
+            $lblStatus.Text = [string]::Format($Text[$Lang].SaveSuccess, (Split-Path $filePath -Leaf)) + " - " + $TrademarkShort[$Lang]
             $lblStatus.ForeColor = $successColor
-            [System.Windows.Forms.MessageBox]::Show([string]::Format($Text[$Lang].SaveSuccess, $filePath), "Success", "OK", "Information")
+            [System.Windows.Forms.MessageBox]::Show([string]::Format($Text[$Lang].SaveSuccess, $filePath) + "`n`n" + $TrademarkFull[$Lang], "Success", "OK", "Information")
         } catch {
             $lblStatus.Text = [string]::Format($Text[$Lang].SaveError, $_.Exception.Message)
             $lblStatus.ForeColor = $errorColor
-            [System.Windows.Forms.MessageBox]::Show([string]::Format($Text[$Lang].SaveError, $_.Exception.Message), "Error", "OK", "Error")
+            [System.Windows.Forms.MessageBox]::Show([string]::Format($Text[$Lang].SaveError, $_.Exception.Message) + "`n`n" + $TrademarkFull[$Lang], "Error", "OK", "Error")
         }
         
         $btnSave.Enabled = $true
@@ -480,7 +664,7 @@ function Show-HistoryWindow {
     $docFolder = [System.IO.Path]::Combine([System.Environment]::GetFolderPath("MyDocuments"), "NIGHT_Schedules")
     
     if (-not (Test-Path $docFolder)) {
-        [System.Windows.Forms.MessageBox]::Show("No saved files found!", "Info", "OK", "Information")
+        [System.Windows.Forms.MessageBox]::Show("No saved files found!" + "`n`n" + $TrademarkFull[$Lang], "Info", "OK", "Information")
         return
     }
     
@@ -498,7 +682,7 @@ function Show-HistoryWindow {
     $jsonFiles = Get-ChildItem -Path $docFolder -Filter "*.json" -File | Sort-Object LastWriteTime -Descending
     
     if ($jsonFiles.Count -eq 0) {
-        [System.Windows.Forms.MessageBox]::Show("No saved files found!", "Info", "OK", "Information")
+        [System.Windows.Forms.MessageBox]::Show("No saved files found!" + "`n`n" + $TrademarkFull[$Lang], "Info", "OK", "Information")
         return
     }
     
@@ -510,13 +694,27 @@ function Show-HistoryWindow {
             $jsonContent = Get-Content -Path $file.FullName -Encoding UTF8 | ConvertFrom-Json
             
             foreach ($address in $jsonContent.Addresses) {
-                if (-not [string]::IsNullOrEmpty($address)) {
-                    $allData += [PSCustomObject]@{
-                        Address = $address
-                        FileName = $file.Name
-                        FilePath = $file.FullName
-                        Modified = $file.LastWriteTime
+                try {
+                    if ($address -is [PSCustomObject]) {
+                        if ($address.PSObject.Properties.Name -contains 'address') {
+                            $addrStr = $address.address.ToString()
+                        } else {
+                            $addrStr = ($address | ConvertTo-Json -Compress)
+                        }
+                    } else {
+                        $addrStr = $address.ToString()
                     }
+
+                    if (-not [string]::IsNullOrEmpty($addrStr)) {
+                        $allData += [PSCustomObject]@{
+                            Address = $addrStr
+                            FileName = $file.Name
+                            FilePath = $file.FullName
+                            Modified = $file.LastWriteTime
+                        }
+                    }
+                } catch {
+                    # Skip malformed entries
                 }
             }
         } catch {
@@ -551,7 +749,7 @@ function Show-HistoryWindow {
     
     # Footer
     $lblInfo = New-Object System.Windows.Forms.Label
-    $lblInfo.Text = "📁 Folder: $docFolder"
+    $lblInfo.Text = "📁 Folder: $docFolder`n" + $TrademarkShort[$Lang]
     $lblInfo.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $lblInfo.ForeColor = [System.Drawing.Color]::Gray
     $lblInfo.AutoSize = $true
@@ -563,192 +761,105 @@ function Show-HistoryWindow {
 
 # --------- VIEW ALL FUNCTION ---------
 function Show-ViewAllWindow {
-    $docFolder = [System.IO.Path]::Combine([System.Environment]::GetFolderPath("MyDocuments"), "NIGHT_Schedules")
+    $filePath = Get-JsonFilePath
     
-    if (-not (Test-Path $docFolder)) {
-        $msg = if ($Lang -eq "EN") { "No saved files found!" } else { "Không tìm thấy file!" }
+    # Check if file exists
+    if (-not (Test-Path $filePath)) {
+        $msg = if ($Lang -eq "EN") { "No saved addresses file found!" } else { "Không tìm thấy file địa chỉ!" }
         [System.Windows.Forms.MessageBox]::Show($msg, "Info", "OK", "Information")
         return
     }
     
-    # Get all JSON files
-    $jsonFiles = Get-ChildItem -Path $docFolder -Filter "NIGHT_Addresses_*.json" -File | Sort-Object LastWriteTime -Descending
-    
-    if ($jsonFiles.Count -eq 0) {
-        $msg = if ($Lang -eq "EN") { "No address files found!" } else { "Không tìm thấy file địa chỉ!" }
-        [System.Windows.Forms.MessageBox]::Show($msg, "Info", "OK", "Information")
-        return
-    }
-    
-    # Get the latest file
-    $latestFile = $jsonFiles[0]
-    
-    # Read addresses from file
+    # Read addresses from file (handle both object and string entries)
     $addresses = @()
     try {
-        $jsonContent = Get-Content -Path $latestFile.FullName -Encoding UTF8 | ConvertFrom-Json
-        $addresses = $jsonContent.Addresses
+        $jsonContent = Get-Content -Path $filePath -Encoding UTF8 | ConvertFrom-Json
+        if ($null -ne $jsonContent.Addresses) {
+            if ($jsonContent.Addresses -is [array]) {
+                foreach ($item in $jsonContent.Addresses) {
+                    if ($item -is [PSCustomObject]) {
+                        if ($item.PSObject.Properties.Name -contains 'address') {
+                            $addresses += $item.address.ToString()
+                        } else {
+                            # fallback: convert whole object to string (shouldn't normally happen)
+                            $addresses += ($item | ConvertTo-Json -Compress)
+                        }
+                    } else {
+                        $addresses += $item.ToString()
+                    }
+                }
+            } else {
+                # Single Addresses entry
+                if ($jsonContent.Addresses -is [PSCustomObject] -and ($jsonContent.Addresses.PSObject.Properties.Name -contains 'address')) {
+                    $addresses += $jsonContent.Addresses.address.ToString()
+                } else {
+                    $addresses += $jsonContent.Addresses.ToString()
+                }
+            }
+        }
     } catch {
-        [System.Windows.Forms.MessageBox]::Show("Error reading file!", "Error", "OK", "Error")
+        [System.Windows.Forms.MessageBox]::Show("Error reading file!" + "`n`n" + $TrademarkFull[$Lang], "Error", "OK", "Error")
         return
     }
     
     if ($addresses.Count -eq 0) {
         $msg = if ($Lang -eq "EN") { "No addresses found in file!" } else { "Không tìm thấy địa chỉ nào!" }
-        [System.Windows.Forms.MessageBox]::Show($msg, "Info", "OK", "Information")
+        [System.Windows.Forms.MessageBox]::Show($msg + "`n`n" + $TrademarkFull[$Lang], "Info", "OK", "Information")
         return
     }
     
-    # Create view window
-    $viewForm = New-Object System.Windows.Forms.Form
-    $viewForm.Text = if ($Lang -eq "EN") { "Select Addresses to Check" } else { "Chọn Địa Chỉ để Kiểm Tra" }
-    $viewForm.Size = New-Object System.Drawing.Size(1000, 700)
-    $viewForm.StartPosition = "CenterParent"
-    $viewForm.BackColor = $bgColor
-    $viewForm.FormBorderStyle = 'FixedDialog'
-    $viewForm.MaximizeBox = $false
+    # Switch to batch check view
+    $panelResults.Visible = $false
+    $checkedListBox.Visible = $true
+    $panelBatchButtons.Visible = $true
+    $lblStatus.Text = if ($Lang -eq "EN") { "Select addresses to check" } else { "Chọn địa chỉ để kiểm tra" }
+    $lblStatus.ForeColor = $textColor
     
-    # Top panel - File info and buttons
-    $topPanel = New-Object System.Windows.Forms.Panel
-    $topPanel.Size = New-Object System.Drawing.Size(970, 60)
-    $topPanel.Location = New-Object System.Drawing.Point(15, 15)
-    $topPanel.BackColor = $bgColor
-    $viewForm.Controls.Add($topPanel)
-    
-    # File info label
-    $lblFileInfo = New-Object System.Windows.Forms.Label
-    $lblFileInfo.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $lblFileInfo.ForeColor = [System.Drawing.Color]::Gray
-    $lblFileInfo.Text = "📁 File: $($latestFile.Name)"
-    $lblFileInfo.AutoSize = $true
-    $lblFileInfo.Location = New-Object System.Drawing.Point(0, 0)
-    $topPanel.Controls.Add($lblFileInfo)
-    
-    # Select All button
-    $btnSelectAll = New-Object System.Windows.Forms.Button
-    $btnSelectAll.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $btnSelectAll.Size = New-Object System.Drawing.Size(120, 30)
-    $btnSelectAll.Location = New-Object System.Drawing.Point(0, 25)
-    $btnSelectAll.BackColor = [System.Drawing.Color]::FromArgb(40, 167, 69)
-    $btnSelectAll.ForeColor = [System.Drawing.Color]::White
-    $btnSelectAll.FlatStyle = 'Flat'
-    $btnSelectAll.Cursor = [System.Windows.Forms.Cursors]::Hand
-    $btnSelectAll.Text = if ($Lang -eq "EN") { "✓ Select All" } else { "✓ Chọn Tất Cả" }
-    $topPanel.Controls.Add($btnSelectAll)
-    
-    # Deselect All button
-    $btnDeselectAll = New-Object System.Windows.Forms.Button
-    $btnDeselectAll.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $btnDeselectAll.Size = New-Object System.Drawing.Size(140, 30)
-    $btnDeselectAll.Location = New-Object System.Drawing.Point(125, 25)
-    $btnDeselectAll.BackColor = [System.Drawing.Color]::Gray
-    $btnDeselectAll.ForeColor = [System.Drawing.Color]::White
-    $btnDeselectAll.FlatStyle = 'Flat'
-    $btnDeselectAll.Cursor = [System.Windows.Forms.Cursors]::Hand
-    $btnDeselectAll.Text = if ($Lang -eq "EN") { "✗ Deselect All" } else { "✗ Bỏ Chọn Tất Cả" }
-    $topPanel.Controls.Add($btnDeselectAll)
-    
-    # Check button
-    $btnCheckSelected = New-Object System.Windows.Forms.Button
-    $btnCheckSelected.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $btnCheckSelected.Size = New-Object System.Drawing.Size(150, 30)
-    $btnCheckSelected.Location = New-Object System.Drawing.Point(840, 25)
-    $btnCheckSelected.BackColor = $primaryColor
-    $btnCheckSelected.ForeColor = [System.Drawing.Color]::White
-    $btnCheckSelected.FlatStyle = 'Flat'
-    $btnCheckSelected.Cursor = [System.Windows.Forms.Cursors]::Hand
-    $btnCheckSelected.Text = if ($Lang -eq "EN") { "🔍 Check Selected" } else { "🔍 Kiểm Tra" }
-    $topPanel.Controls.Add($btnCheckSelected)
-    
-    # Checkbox list for addresses
-    $checkedListBox = New-Object System.Windows.Forms.CheckedListBox
-    $checkedListBox.Size = New-Object System.Drawing.Size(970, 520)
-    $checkedListBox.Location = New-Object System.Drawing.Point(15, 85)
-    $checkedListBox.BackColor = $panelColor
-    $checkedListBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $checkedListBox.BorderStyle = 'FixedSingle'
-    $viewForm.Controls.Add($checkedListBox)
-    
-    # Add addresses to checklist
+    # Clear and load addresses
+    $checkedListBox.Items.Clear()
     foreach ($addr in $addresses) {
         $checkedListBox.Items.Add($addr)
     }
-    
-    # Select All button click event
-    $btnSelectAll.Add_Click({
-        for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
-            $checkedListBox.SetItemChecked($i, $true)
-        }
-    })
-    
-    # Deselect All button click event
-    $btnDeselectAll.Add_Click({
-        for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
-            $checkedListBox.SetItemChecked($i, $false)
-        }
-    })
-    
-    # Check Selected button click event
-    $btnCheckSelected.Add_Click({
-        $selectedAddresses = @()
-        for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
-            if ($checkedListBox.GetItemChecked($i)) {
-                $selectedAddresses += $checkedListBox.Items[$i]
-            }
-        }
-        
-        if ($selectedAddresses.Count -eq 0) {
-            $msg = if ($Lang -eq "EN") { "Please select at least one address!" } else { "Vui lòng chọn ít nhất một địa chỉ!" }
-            [System.Windows.Forms.MessageBox]::Show($msg, "Warning", "OK", "Warning")
-            return
-        }
-        
-        $viewForm.Hide()
-        Show-CheckResultsWindow -selectedAddresses $selectedAddresses
-        $viewForm.Close()
-    })
-    
-    $viewForm.ShowDialog() | Out-Null
 }
 
-# --------- CHECK RESULTS WINDOW ---------
-function Show-CheckResultsWindow {
-    param([array]$selectedAddresses)
+# --------- SELECT ALL BUTTON EVENT ---------
+$btnSelectAll.Add_Click({
+    for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
+        $checkedListBox.SetItemChecked($i, $true)
+    }
+})
+
+# --------- DESELECT ALL BUTTON EVENT ---------
+$btnDeselectAll.Add_Click({
+    for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
+        $checkedListBox.SetItemChecked($i, $false)
+    }
+})
+
+# --------- CHECK SELECTED BUTTON EVENT ---------
+$btnCheckSelected.Add_Click({
+    $selectedAddresses = @()
+    for ($i = 0; $i -lt $checkedListBox.Items.Count; $i++) {
+        if ($checkedListBox.GetItemChecked($i)) {
+            $selectedAddresses += $checkedListBox.Items[$i]
+        }
+    }
     
-    # Create results window
-    $resultsForm = New-Object System.Windows.Forms.Form
-    $resultsForm.Text = if ($Lang -eq "EN") { "Check Results" } else { "Kết Quả Kiểm Tra" }
-    $resultsForm.Size = New-Object System.Drawing.Size(1000, 700)
-    $resultsForm.StartPosition = "CenterParent"
-    $resultsForm.BackColor = $bgColor
-    $resultsForm.FormBorderStyle = 'FixedDialog'
-    $resultsForm.MaximizeBox = $false
+    if ($selectedAddresses.Count -eq 0) {
+        $msg = if ($Lang -eq "EN") { "Please select at least one address!" } else { "Vui lòng chọn ít nhất một địa chỉ!" }
+        [System.Windows.Forms.MessageBox]::Show($msg + "`n`n" + $TrademarkFull[$Lang], "Warning", "OK", "Warning")
+        return
+    }
     
-    # Progress bar
-    $progressBar = New-Object System.Windows.Forms.ProgressBar
-    $progressBar.Size = New-Object System.Drawing.Size(970, 20)
-    $progressBar.Location = New-Object System.Drawing.Point(15, 15)
-    $progressBar.Style = 'Continuous'
-    $resultsForm.Controls.Add($progressBar)
+    # Switch to results view
+    $checkedListBox.Visible = $false
+    $panelBatchButtons.Visible = $false
+    $panelResults.Visible = $true
+    $panelResults.Controls.Clear()
     
-    # Status label
-    $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-    $lblStatus.ForeColor = [System.Drawing.Color]::Gray
-    $lblStatus.Size = New-Object System.Drawing.Size(970, 20)
-    $lblStatus.Location = New-Object System.Drawing.Point(15, 40)
-    $resultsForm.Controls.Add($lblStatus)
-    
-    # Results panel
-    $panelResults = New-Object System.Windows.Forms.Panel
-    $panelResults.Size = New-Object System.Drawing.Size(970, 600)
-    $panelResults.Location = New-Object System.Drawing.Point(15, 65)
-    $panelResults.BackColor = $panelColor
-    $panelResults.BorderStyle = 'FixedSingle'
-    $panelResults.AutoScroll = $true
-    $resultsForm.Controls.Add($panelResults)
-    
-    $resultsForm.Show()
+    $lblStatus.Text = $Text[$Lang].Loading
+    $lblStatus.ForeColor = $warningColor
+    $form.Refresh()
     
     # Check selected addresses
     $yPosition = 15
@@ -757,30 +868,46 @@ function Show-CheckResultsWindow {
     $allResults = @()
     
     for ($i = 0; $i -lt $selectedAddresses.Count; $i++) {
-        $addr = $selectedAddresses[$i]
-        $progressBar.Value = [int](($i + 1) / $selectedAddresses.Count * 100)
-        $lblStatus.Text = "🔍 Checking $($i+1)/$($selectedAddresses.Count): $addr"
-        $resultsForm.Refresh()
+        $addr = $selectedAddresses[$i].Trim()
+        $form.Refresh()
+        [System.Windows.Forms.Application]::DoEvents()
         
         try {
             $url = "https://mainnet.prod.gd.midnighttge.io/thaws/$addr/schedule"
             $response = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10 -UseBasicParsing
             
-            $data = $response
-            
-            if ($data.thaws -and $data.thaws.Count -gt 0) {
+            if ($response -and $response.thaws -and $response.thaws.Count -gt 0) {
                 $successCount++
                 $totalAmount = 0
+                $thawDetails = @()
                 
-                foreach ($item in $data.thaws) {
-                    $amount = $item.amount / 1e6
+                foreach ($item in $response.thaws) {
+                    $amount = [decimal]$item.amount / 1e6
                     $totalAmount += $amount
+                    
+                    # Parse date and compute status/countdown
+                    $thawDateTime = [DateTime]::Parse($item.thawing_period_start)
+                    $dt = $thawDateTime.AddHours(7)
+                    $VNDate = $dt.ToString("yyyy-MM-dd HH:mm:ss")
+
+                    $daysUntil = ($thawDateTime - [DateTime]::UtcNow).Days
+                    if ($daysUntil -lt 0) { $daysUntil = 0 }
+
+                    $statusText = if ($item.status -eq "upcoming") { "Unclaimed" } else { "Claimed" }
+
+                    $thawDetails += @{
+                        Amount = $amount
+                        Date = $VNDate
+                        Status = $statusText
+                        DaysUntil = $daysUntil
+                    }
                 }
                 
                 $allResults += [PSCustomObject]@{
                     Address = $addr
                     Total = $totalAmount
-                    Count = $data.thaws.Count
+                    Count = $response.thaws.Count
+                    Details = $thawDetails
                 }
                 
                 $totalNight += $totalAmount
@@ -792,22 +919,21 @@ function Show-CheckResultsWindow {
         Start-Sleep -Milliseconds 300
     }
     
-    # Display results
-    $panelResults.Controls.Clear()
-    
+    # Display results in panelResults
     # Title
     $lblTitle = New-Object System.Windows.Forms.Label
-    $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 13)
+    $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 12)
     $lblTitle.ForeColor = $primaryColor
     $lblTitle.Text = if ($Lang -eq "EN") { "📊 NIGHT SCHEDULE SUMMARY" } else { "📊 TÓM TẮT LỊCH TRẢ NIGHT" }
-    $lblTitle.Size = New-Object System.Drawing.Size(950, 28)
+    $lblTitle.Size = New-Object System.Drawing.Size(730, 25)
     $lblTitle.Location = New-Object System.Drawing.Point(10, $yPosition)
+    $lblTitle.TextAlign = 'MiddleLeft'
     $panelResults.Controls.Add($lblTitle)
-    $yPosition += 35
+    $yPosition += 30
     
     # Overall stats
     $lblStats = New-Object System.Windows.Forms.Label
-    $lblStats.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 11)
+    $lblStats.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
     $lblStats.ForeColor = $successColor
     $statsText = if ($Lang -eq "EN") {
         "✅ Checked: $($selectedAddresses.Count) | Success: $successCount | Total NIGHT: $($totalNight.ToString("N0"))"
@@ -815,44 +941,84 @@ function Show-CheckResultsWindow {
         "✅ Kiểm tra: $($selectedAddresses.Count) | Thành công: $successCount | Tổng NIGHT: $($totalNight.ToString("N0"))"
     }
     $lblStats.Text = $statsText
-    $lblStats.Size = New-Object System.Drawing.Size(950, 25)
+    $lblStats.Size = New-Object System.Drawing.Size(730, 20)
     $lblStats.Location = New-Object System.Drawing.Point(10, $yPosition)
     $panelResults.Controls.Add($lblStats)
-    $yPosition += 30
+    $yPosition += 25
     
     # Divider
     $lblDiv = New-Object System.Windows.Forms.Label
     $lblDiv.BorderStyle = 'FixedSingle'
-    $lblDiv.Size = New-Object System.Drawing.Size(950, 1)
+    $lblDiv.Size = New-Object System.Drawing.Size(730, 1)
     $lblDiv.Location = New-Object System.Drawing.Point(10, $yPosition)
     $panelResults.Controls.Add($lblDiv)
-    $yPosition += 15
+    $yPosition += 10
     
-    # Details
-    foreach ($result in $allResults) {
+    # Details for each address
+        foreach ($result in $allResults) {
+        # Address header
         $lblAddr = New-Object System.Windows.Forms.Label
         $lblAddr.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
         $lblAddr.ForeColor = $textColor
-        $lblAddr.Text = "📌 Address: $($result.Address)"
-        $lblAddr.Size = New-Object System.Drawing.Size(950, 22)
+        $lblAddr.Text = "📌 $($result.Address)"
+        $lblAddr.Size = New-Object System.Drawing.Size(730, 20)
         $lblAddr.Location = New-Object System.Drawing.Point(10, $yPosition)
         $panelResults.Controls.Add($lblAddr)
-        $yPosition += 25
+        $yPosition += 22
         
+        # Total and batch count
         $lblAmount = New-Object System.Windows.Forms.Label
-        $lblAmount.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+        $lblAmount.Font = New-Object System.Drawing.Font("Segoe UI", 9)
         $lblAmount.ForeColor = $accentColor
         $lblAmount.Text = "   💰 Total: $($result.Total.ToString("N0")) NIGHT | 📦 Batches: $($result.Count)"
-        $lblAmount.Size = New-Object System.Drawing.Size(950, 20)
+        $lblAmount.Size = New-Object System.Drawing.Size(730, 18)
         $lblAmount.Location = New-Object System.Drawing.Point(10, $yPosition)
         $panelResults.Controls.Add($lblAmount)
-        $yPosition += 25
+        $yPosition += 20
+        
+        # Thaw details
+        $batchNum = 1
+        foreach ($detail in $result.Details) {
+            $lblDetail = New-Object System.Windows.Forms.Label
+            $lblDetail.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+            $lblDetail.ForeColor = [System.Drawing.Color]::Gray
+            $lblDetail.Text = "      Batch $batchNum`: $($detail.Amount.ToString("N0")) NIGHT - $($detail.Date)"
+            $lblDetail.Size = New-Object System.Drawing.Size(730, 16)
+            $lblDetail.Location = New-Object System.Drawing.Point(10, $yPosition)
+            $panelResults.Controls.Add($lblDetail)
+            $yPosition += 18
+
+            # Status & countdown label (similar to single-address view)
+            $lblStatusSmall = New-Object System.Windows.Forms.Label
+            $lblStatusSmall.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+            $lblStatusSmall.ForeColor = if ($detail.Status -eq 'Unclaimed') { $warningColor } else { $successColor }
+            $countdownText = if ($detail.Status -eq 'Unclaimed') { " | In $($detail.DaysUntil) days" } else { "" }
+            $lblStatusSmall.Text = "   🔔 $($detail.Status)$countdownText"
+            $lblStatusSmall.Size = New-Object System.Drawing.Size(730, 14)
+            $lblStatusSmall.Location = New-Object System.Drawing.Point(20, $yPosition)
+            $panelResults.Controls.Add($lblStatusSmall)
+            $yPosition += 16
+
+            $batchNum++
+        }
+        
+        $yPosition += 8
     }
     
-    $statusMsg = if ($Lang -eq "EN") { "✅ Completed!" } else { "✅ Hoàn thành!" }
-    $lblStatus.Text = $statusMsg
-    $progressBar.Value = 100
-}
+    $panelResults.AutoScrollPosition = New-Object System.Drawing.Point(0, 0)
+    $lblStatus.Text = if ($Lang -eq "EN") { "✅ Completed!" } else { "✅ Hoàn thành!" }
+    $lblStatus.ForeColor = $successColor
+})
+
+# --------- BACK FROM BATCH BUTTON EVENT ---------
+$btnBackFromBatch.Add_Click({
+    $panelResults.Visible = $true
+    $checkedListBox.Visible = $false
+    $panelBatchButtons.Visible = $false
+    $panelResults.Controls.Clear()
+    $lblStatus.Text = ""
+    $lblStatus.ForeColor = $textColor
+})
 
 # --------- HISTORY BUTTON EVENT ---------
 $btnHistory.Add_Click({
@@ -864,5 +1030,51 @@ $btnViewAll.Add_Click({
     Show-ViewAllWindow
 })
 
-# --------- SHOW FORM ---------
+# --------- GO TO MAINSITE BUTTON EVENT ---------
+$btnGoToSite.Add_Click({
+    Start-Process "https://redeem.midnight.gd/"
+})
+
+# --------- TRADEMARK POPUP (shown at startup) ---------
+function Show-TrademarkPopup {
+    $tmForm = New-Object System.Windows.Forms.Form
+    $tmForm.Text = if ($Lang -eq "EN") { "About / Attribution" } else { "Giới thiệu / Ghi nguồn" }
+    $tmForm.Size = New-Object System.Drawing.Size(520, 300)
+    $tmForm.StartPosition = "CenterScreen"
+    $tmForm.FormBorderStyle = 'FixedDialog'
+    $tmForm.MaximizeBox = $false
+    $tmForm.MinimizeBox = $false
+    $tmForm.BackColor = $bgColor
+
+    $lbl = New-Object System.Windows.Forms.Label
+    $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $lbl.ForeColor = $textColor
+    $lbl.Location = New-Object System.Drawing.Point(12, 12)
+    $lbl.Size = New-Object System.Drawing.Size(484, 200)
+    $lbl.Text = $TrademarkFull[$Lang]
+    $lbl.AutoEllipsis = $true
+    $lbl.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $tmForm.Controls.Add($lbl)
+
+    $btnText = if ($Lang -eq "EN") { "Let's go" } else { "Tiếp tục" }
+    $btnGo = New-Object System.Windows.Forms.Button
+    $btnGo.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+    $btnGo.Size = New-Object System.Drawing.Size(120, 36)
+    $btnGo.Location = New-Object System.Drawing.Point(188, 220)
+    $btnGo.Text = $btnText
+    $btnGo.BackColor = $primaryColor
+    $btnGo.ForeColor = [System.Drawing.Color]::White
+    $btnGo.FlatStyle = 'Flat'
+    $btnGo.FlatAppearance.BorderSize = 0
+    $btnGo.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $btnGo.Add_Click({ $tmForm.Close() })
+    $tmForm.Controls.Add($btnGo)
+
+    # Make the popup modal and top-most so user sees it first
+    $tmForm.TopMost = $true
+    $tmForm.ShowDialog() | Out-Null
+}
+
+# Show trademark popup, then main form
+Show-TrademarkPopup
 $form.ShowDialog() | Out-Null
