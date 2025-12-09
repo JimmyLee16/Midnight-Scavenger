@@ -31,7 +31,7 @@ $Text = @{
         CopyButton = "📋 Copy Results"
         ClearButton = "🗑️ Clear"
         SaveButton = "💾 Save Address"
-        HistoryButton = "📖 Check address balance (coming soon)"
+        HistoryButton = "📖 View History"
         BtnLang = "🌐 Language"
         LangSwitch = "Switched to Vietnamese 🇻🇳"
         Loading = "🔄 Checking..."
@@ -56,8 +56,8 @@ $Text = @{
         BatchLabel = "📦 Số đợt: {0}"
         CopyButton = "📋 Sao chép"
         ClearButton = "🗑️ Xóa"
-        SaveButton = "💾 Lưu địa chỉ"
-        HistoryButton = "📖 Kiểm tra số dư"
+        SaveButton = "💾 Lưu XLSX"
+        HistoryButton = "📖 Xem Lịch"
         BtnLang = "🌐 Ngôn ngữ"
         LangSwitch = "Đã chuyển sang tiếng Anh 🇬🇧"
         Loading = "🔄 Đang kiểm tra..."
@@ -85,16 +85,84 @@ $TrademarkShort = @{
 $global:currentScheduleData = $null
 $global:currentAddress = ""
 $global:excelFilePath = ""
+$global:nightPrice = 50000  # Default NIGHT price
+$global:priceLastUpdated = $null
+
+# --------- OKX API Configuration ---------
+$OKX_API_URL = 'https://www.okx.com/api/v5/market/tickers?instType=SPOT'
+$INSTRUMENTS = @('ADA-USDT', 'ETH-USDT', 'BNB-USDT', 'OKB-USDT', 'XRP-USDT', 'LINK-USDT', 'BTC-USDT', 'NIGHT-USDT')
+
+# Function to fetch live prices from OKX
+function Get-OKXPrices {
+    try {
+        $response = Invoke-RestMethod -Uri $OKX_API_URL -Method Get -TimeoutSec 5 -ErrorAction Stop
+        $prices = @{}
+        
+        foreach ($instrument in $INSTRUMENTS) {
+            $data = $response.data | Where-Object { $_.instId -eq $instrument }
+            if ($data) {
+                $symbol = $instrument.Split('-')[0]
+                $prices[$symbol] = [decimal]$data.last
+            }
+        }
+        
+        return $prices
+    } catch {
+        return $null
+    }
+}
+
+# Function to format price display
+function Format-PriceDisplay {
+    param([hashtable]$prices)
+    
+    $display = "💰 Live Prices: "
+    if ($prices.Count -gt 0) {
+        foreach ($symbol in $prices.Keys) {
+            $price = $prices[$symbol]
+            $display += "${symbol}: `$$($price.ToString("F2")) | "
+        }
+    }
+    return $display.TrimEnd(' | ')
+}
 
 # --------- MAIN FORM ---------
 $form = New-Object System.Windows.Forms.Form
 $form.Text = $Text[$Lang].Title
-$form.Size = New-Object System.Drawing.Size(900, 700)
+$form.Size = New-Object System.Drawing.Size(900, 750)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = $bgColor
 $form.FormBorderStyle = 'Sizable'
 $form.MaximizeBox = $true
 $form.Icon = $null
+
+# --------- PRICE TICKER PANEL ---------
+$panelPriceTicker = New-Object System.Windows.Forms.Panel
+$panelPriceTicker.Size = New-Object System.Drawing.Size(800, 35)
+$panelPriceTicker.Location = New-Object System.Drawing.Point(25, 10)
+$panelPriceTicker.BackColor = [System.Drawing.Color]::FromArgb(224, 247, 250)
+$panelPriceTicker.BorderStyle = 'FixedSingle'
+$form.Controls.Add($panelPriceTicker)
+
+$lblPriceTicker = New-Object System.Windows.Forms.Label
+$lblPriceTicker.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$lblPriceTicker.ForeColor = $accentColor
+$lblPriceTicker.Text = "⏳ Loading prices..."
+$lblPriceTicker.Size = New-Object System.Drawing.Size(770, 20)
+$lblPriceTicker.Location = New-Object System.Drawing.Point(5, 5)
+$lblPriceTicker.AutoEllipsis = $true
+$panelPriceTicker.Controls.Add($lblPriceTicker)
+
+# Timer for price update animation
+$timerPrice = New-Object System.Windows.Forms.Timer
+$timerPrice.Interval = 10000  # Update every 10 seconds
+$timerPrice.Add_Tick({
+    $prices = Get-OKXPrices
+    if ($prices -and $prices.Count -gt 0) {
+        $lblPriceTicker.Text = Format-PriceDisplay -prices $prices
+        $global:priceLastUpdated = Get-Date
+    }
+})
 
 # --------- TITLE ---------
 $lblTitle = New-Object System.Windows.Forms.Label
@@ -102,51 +170,36 @@ $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 16)
 $lblTitle.ForeColor = $primaryColor
 $lblTitle.TextAlign = 'MiddleCenter'
 $lblTitle.Size = New-Object System.Drawing.Size(750, 40)
-$lblTitle.Location = New-Object System.Drawing.Point(25, 15)
+$lblTitle.Location = New-Object System.Drawing.Point(25, 50)
 $form.Controls.Add($lblTitle)
 
 # --------- LANGUAGE BUTTON ---------
 $btnLang = New-Object System.Windows.Forms.Button
 $btnLang.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$btnLang.Size = New-Object System.Drawing.Size(50, 32)
-$btnLang.Location = New-Object System.Drawing.Point(650, 15)
+$btnLang.Size = New-Object System.Drawing.Size(170, 32)
+$btnLang.Location = New-Object System.Drawing.Point(640, 50)
 $btnLang.BackColor = [System.Drawing.Color]::White
 $btnLang.ForeColor = $textColor
 $btnLang.FlatStyle = 'Flat'
 $btnLang.FlatAppearance.BorderSize = 1
 $btnLang.Cursor = [System.Windows.Forms.Cursors]::Hand
-$btnLang.Text = "🌐"
+$btnLang.Text = "Language / Ngôn ngữ"
 $form.Controls.Add($btnLang)
 
-# --------- LANGUAGE SELECT COMBO (visible) ---------
-$cmbLang = New-Object System.Windows.Forms.ComboBox
-$cmbLang.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-$cmbLang.Size = New-Object System.Drawing.Size(80, 32)
-$cmbLang.Location = New-Object System.Drawing.Point(710, 15)
-$cmbLang.DropDownStyle = 'DropDownList'
-$cmbLang.Items.AddRange(@("EN","VN")) | Out-Null
-$cmbLang.SelectedItem = $Lang
-$cmbLang.Cursor = [System.Windows.Forms.Cursors]::Hand
-$form.Controls.Add($cmbLang)
-$cmbLang.Add_SelectedIndexChanged({
-    if ($cmbLang.SelectedItem -ne $null) {
-        $Lang = $cmbLang.SelectedItem.ToString()
-        Update-Language
-    }
-})
+# NOTE: Removed visible combo box. Language toggles via `$btnLang` button.
 
 # --------- ADDRESS INPUT SECTION ---------
 $lblAddress = New-Object System.Windows.Forms.Label
 $lblAddress.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
 $lblAddress.ForeColor = $textColor
 $lblAddress.Size = New-Object System.Drawing.Size(750, 20)
-$lblAddress.Location = New-Object System.Drawing.Point(25, 65)
+$lblAddress.Location = New-Object System.Drawing.Point(25, 100)
 $form.Controls.Add($lblAddress)
 
 $txtAddress = New-Object System.Windows.Forms.TextBox
 $txtAddress.Font = New-Object System.Drawing.Font("Segoe UI", 11)
 $txtAddress.Size = New-Object System.Drawing.Size(750, 40)
-$txtAddress.Location = New-Object System.Drawing.Point(25, 85)
+$txtAddress.Location = New-Object System.Drawing.Point(25, 120)
 $txtAddress.BackColor = [System.Drawing.Color]::White
 $txtAddress.ForeColor = $textColor
 $form.Controls.Add($txtAddress)
@@ -155,7 +208,7 @@ $form.Controls.Add($txtAddress)
 $btnCheck = New-Object System.Windows.Forms.Button
 $btnCheck.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 11)
 $btnCheck.Size = New-Object System.Drawing.Size(360, 45)
-$btnCheck.Location = New-Object System.Drawing.Point(25, 140)
+$btnCheck.Location = New-Object System.Drawing.Point(25, 175)
 $btnCheck.BackColor = $primaryColor
 $btnCheck.ForeColor = [System.Drawing.Color]::White
 $btnCheck.FlatStyle = 'Flat'
@@ -169,7 +222,7 @@ $btnCheck.Add_MouseLeave({ $btnCheck.BackColor = $primaryColor })
 $btnCopy = New-Object System.Windows.Forms.Button
 $btnCopy.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnCopy.Size = New-Object System.Drawing.Size(170, 45)
-$btnCopy.Location = New-Object System.Drawing.Point(415, 140)
+$btnCopy.Location = New-Object System.Drawing.Point(415, 175)
 $btnCopy.BackColor = $successColor
 $btnCopy.ForeColor = [System.Drawing.Color]::White
 $btnCopy.FlatStyle = 'Flat'
@@ -184,7 +237,7 @@ $btnCopy.Add_MouseLeave({ if ($btnCopy.Enabled) { $btnCopy.BackColor = $successC
 $btnClear = New-Object System.Windows.Forms.Button
 $btnClear.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnClear.Size = New-Object System.Drawing.Size(155, 45)
-$btnClear.Location = New-Object System.Drawing.Point(620, 140)
+$btnClear.Location = New-Object System.Drawing.Point(620, 175)
 $btnClear.BackColor = [System.Drawing.Color]::Gray
 $btnClear.ForeColor = [System.Drawing.Color]::White
 $btnClear.FlatStyle = 'Flat'
@@ -198,7 +251,7 @@ $btnClear.Add_MouseLeave({ $btnClear.BackColor = [System.Drawing.Color]::Gray })
 $btnSave = New-Object System.Windows.Forms.Button
 $btnSave.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnSave.Size = New-Object System.Drawing.Size(130, 45)
-$btnSave.Location = New-Object System.Drawing.Point(25, 625)
+$btnSave.Location = New-Object System.Drawing.Point(25, 670)
 $btnSave.BackColor = [System.Drawing.Color]::FromArgb(102, 51, 153)
 $btnSave.ForeColor = [System.Drawing.Color]::White
 $btnSave.FlatStyle = 'Flat'
@@ -213,7 +266,7 @@ $btnSave.Add_MouseLeave({ if ($btnSave.Enabled) { $btnSave.BackColor = [System.D
 $btnGoToSite = New-Object System.Windows.Forms.Button
 $btnGoToSite.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnGoToSite.Size = New-Object System.Drawing.Size(145, 45)
-$btnGoToSite.Location = New-Object System.Drawing.Point(165, 625)
+$btnGoToSite.Location = New-Object System.Drawing.Point(165, 670)
 $btnGoToSite.BackColor = [System.Drawing.Color]::FromArgb(255, 102, 0)
 $btnGoToSite.ForeColor = [System.Drawing.Color]::White
 $btnGoToSite.FlatStyle = 'Flat'
@@ -227,7 +280,7 @@ $btnGoToSite.Add_MouseLeave({ $btnGoToSite.BackColor = [System.Drawing.Color]::F
 $btnHistory = New-Object System.Windows.Forms.Button
 $btnHistory.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnHistory.Size = New-Object System.Drawing.Size(140, 45)
-$btnHistory.Location = New-Object System.Drawing.Point(320, 625)
+$btnHistory.Location = New-Object System.Drawing.Point(320, 670)
 $btnHistory.BackColor = [System.Drawing.Color]::FromArgb(0, 102, 204)
 $btnHistory.ForeColor = [System.Drawing.Color]::White
 $btnHistory.FlatStyle = 'Flat'
@@ -241,7 +294,7 @@ $btnHistory.Add_MouseLeave({ $btnHistory.BackColor = [System.Drawing.Color]::Fro
 $btnViewAll = New-Object System.Windows.Forms.Button
 $btnViewAll.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $btnViewAll.Size = New-Object System.Drawing.Size(140, 45)
-$btnViewAll.Location = New-Object System.Drawing.Point(470, 625)
+$btnViewAll.Location = New-Object System.Drawing.Point(470, 670)
 $btnViewAll.BackColor = [System.Drawing.Color]::FromArgb(220, 53, 69)
 $btnViewAll.ForeColor = [System.Drawing.Color]::White
 $btnViewAll.FlatStyle = 'Flat'
@@ -256,14 +309,14 @@ $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $lblStatus.ForeColor = $textColor
 $lblStatus.Size = New-Object System.Drawing.Size(750, 25)
-$lblStatus.Location = New-Object System.Drawing.Point(25, 200)
+$lblStatus.Location = New-Object System.Drawing.Point(25, 230)
 $lblStatus.TextAlign = 'MiddleLeft'
 $form.Controls.Add($lblStatus)
 
 # --------- RESULTS PANEL ---------
 $panelResults = New-Object System.Windows.Forms.Panel
-$panelResults.Size = New-Object System.Drawing.Size(750, 340)
-$panelResults.Location = New-Object System.Drawing.Point(25, 235)
+$panelResults.Size = New-Object System.Drawing.Size(750, 380)
+$panelResults.Location = New-Object System.Drawing.Point(25, 265)
 $panelResults.BackColor = $panelColor
 $panelResults.BorderStyle = 'FixedSingle'
 $panelResults.AutoScroll = $true
@@ -272,8 +325,8 @@ $form.Controls.Add($panelResults)
 
 # --------- CHECKBOX LIST FOR BATCH CHECK ---------
 $checkedListBox = New-Object System.Windows.Forms.CheckedListBox
-$checkedListBox.Size = New-Object System.Drawing.Size(750, 340)
-$checkedListBox.Location = New-Object System.Drawing.Point(25, 235)
+$checkedListBox.Size = New-Object System.Drawing.Size(750, 380)
+$checkedListBox.Location = New-Object System.Drawing.Point(25, 265)
 $checkedListBox.BackColor = $panelColor
 $checkedListBox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
 $checkedListBox.BorderStyle = 'FixedSingle'
@@ -284,7 +337,7 @@ $form.Controls.SetChildIndex($checkedListBox, 0)
 # --------- BATCH CHECK BUTTONS PANEL ---------
 $panelBatchButtons = New-Object System.Windows.Forms.Panel
 $panelBatchButtons.Size = New-Object System.Drawing.Size(750, 60)
-$panelBatchButtons.Location = New-Object System.Drawing.Point(25, 585)
+$panelBatchButtons.Location = New-Object System.Drawing.Point(25, 655)
 $panelBatchButtons.BackColor = $panelColor
 $panelBatchButtons.BorderStyle = 'FixedSingle'
 $panelBatchButtons.Visible = $false
@@ -336,7 +389,7 @@ $btnBackFromBatch.Text = if ($Lang -eq "EN") { "← Back" } else { "← Quay L�
 $panelBatchButtons.Controls.Add($btnBackFromBatch)
 
 # --------- UPDATE FORM SIZE ---------
-$form.Size = New-Object System.Drawing.Size(900, 700)
+$form.Size = New-Object System.Drawing.Size(900, 750)
 
 # --------- UPDATE LANGUAGE FUNCTION ---------
 function Update-Language {
@@ -350,7 +403,8 @@ function Update-Language {
     $btnGoToSite.Text = if ($Lang -eq "EN") { "🌐 Go to Site" } else { "🌐 Đến Trang" }
     $btnHistory.Text = $Text[$Lang].HistoryButton
     $btnViewAll.Text = $Text[$Lang].ViewAllButton
-    $btnLang.Text = $Text[$Lang].BtnLang
+    # Keep the button label bilingual as requested
+    $btnLang.Text = "Language / Ngôn ngữ"
     $txtAddress.PlaceholderText = $Text[$Lang].AddressHint
 }
 
@@ -400,6 +454,13 @@ $btnCheck.Add_Click({
     $panelResults.Controls.Clear()
     $btnCheck.Enabled = $false
     $btnCopy.Enabled = $false
+    
+    # Fetch latest NIGHT price from OKX
+    $prices = Get-OKXPrices
+    if ($prices) {
+        $lblPriceTicker.Text = Format-PriceDisplay -prices $prices
+    }
+    
     $form.Refresh()
 
     try {
@@ -446,11 +507,14 @@ $btnCheck.Add_Click({
             $daysUntil = ($thawDateTime - [DateTime]::UtcNow).Days
             if ($daysUntil -lt 0) { $daysUntil = 0 }
 
-            # Batch number and amount
+            # Batch number and amount with USD value (using current NIGHT price)
+            $nightPrice = if ($prices -and $prices['NIGHT']) { $prices['NIGHT'] } else { 50000 }
+            $usdValue = [math]::Round($amount * $nightPrice, 2)
+            
             $lblBatch = New-Object System.Windows.Forms.Label
             $lblBatch.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
             $lblBatch.ForeColor = $textColor
-            $lblBatch.Text = [string]::Format($Text[$Lang].ThawNo, $idx, $amount)
+            $lblBatch.Text = [string]::Format($Text[$Lang].ThawNo, $idx, $amount) + " ≈ `$$usdValue USD"
             $lblBatch.Size = New-Object System.Drawing.Size(730, 22)
             $lblBatch.Location = New-Object System.Drawing.Point(10, $yPosition)
             $panelResults.Controls.Add($lblBatch)
@@ -496,7 +560,8 @@ $btnCheck.Add_Click({
         $lblTotal = New-Object System.Windows.Forms.Label
         $lblTotal.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 11)
         $lblTotal.ForeColor = $successColor
-        $lblTotal.Text = [string]::Format($Text[$Lang].TotalLabel, $totalAmount)
+        $totalUSD = [math]::Round($totalAmount * $nightPrice, 2)
+        $lblTotal.Text = [string]::Format($Text[$Lang].TotalLabel, $totalAmount) + " ≈ `$$totalUSD USD"
         $lblTotal.Size = New-Object System.Drawing.Size(730, 25)
         $lblTotal.Location = New-Object System.Drawing.Point(10, $yPosition)
         $panelResults.Controls.Add($lblTotal)
@@ -867,6 +932,12 @@ $btnCheckSelected.Add_Click({
     $successCount = 0
     $allResults = @()
     
+    # Fetch latest NIGHT price for batch check
+    $pricesBatch = Get-OKXPrices
+    if ($pricesBatch) {
+        $lblPriceTicker.Text = Format-PriceDisplay -prices $pricesBatch
+    }
+    
     for ($i = 0; $i -lt $selectedAddresses.Count; $i++) {
         $addr = $selectedAddresses[$i].Trim()
         $form.Refresh()
@@ -931,20 +1002,22 @@ $btnCheckSelected.Add_Click({
     $panelResults.Controls.Add($lblTitle)
     $yPosition += 30
     
-    # Overall stats
+    # Overall stats with USD value
     $lblStats = New-Object System.Windows.Forms.Label
     $lblStats.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
     $lblStats.ForeColor = $successColor
+    $nightPrice = if ($pricesBatch -and $pricesBatch['NIGHT']) { $pricesBatch['NIGHT'] } else { 0.05 }
+    $totalUSD = [math]::Round($totalNight * $nightPrice, 2)
     $statsText = if ($Lang -eq "EN") {
-        "✅ Checked: $($selectedAddresses.Count) | Success: $successCount | Total NIGHT: $($totalNight.ToString("N0"))"
+        "✅ Checked: $($selectedAddresses.Count) | Success: $successCount | Total NIGHT: $($totalNight.ToString("N0")) ≈ `$$totalUSD USD"
     } else {
-        "✅ Kiểm tra: $($selectedAddresses.Count) | Thành công: $successCount | Tổng NIGHT: $($totalNight.ToString("N0"))"
+        "✅ Kiểm tra: $($selectedAddresses.Count) | Thành công: $successCount | Tổng NIGHT: $($totalNight.ToString("N0")) ≈ `$$totalUSD USD"
     }
     $lblStats.Text = $statsText
-    $lblStats.Size = New-Object System.Drawing.Size(730, 20)
+    $lblStats.Size = New-Object System.Drawing.Size(730, 25)
     $lblStats.Location = New-Object System.Drawing.Point(10, $yPosition)
     $panelResults.Controls.Add($lblStats)
-    $yPosition += 25
+    $yPosition += 30
     
     # Divider
     $lblDiv = New-Object System.Windows.Forms.Label
@@ -955,7 +1028,7 @@ $btnCheckSelected.Add_Click({
     $yPosition += 10
     
     # Details for each address
-        foreach ($result in $allResults) {
+    foreach ($result in $allResults) {
         # Address header
         $lblAddr = New-Object System.Windows.Forms.Label
         $lblAddr.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 10)
@@ -966,11 +1039,12 @@ $btnCheckSelected.Add_Click({
         $panelResults.Controls.Add($lblAddr)
         $yPosition += 22
         
-        # Total and batch count
+        # Total and batch count with USD
+        $resultUSD = [math]::Round($result.Total * $nightPrice, 2)
         $lblAmount = New-Object System.Windows.Forms.Label
         $lblAmount.Font = New-Object System.Drawing.Font("Segoe UI", 9)
         $lblAmount.ForeColor = $accentColor
-        $lblAmount.Text = "   💰 Total: $($result.Total.ToString("N0")) NIGHT | 📦 Batches: $($result.Count)"
+        $lblAmount.Text = "   💰 Total: $($result.Total.ToString("N0")) NIGHT ≈ `$$resultUSD USD | 📦 Batches: $($result.Count)"
         $lblAmount.Size = New-Object System.Drawing.Size(730, 18)
         $lblAmount.Location = New-Object System.Drawing.Point(10, $yPosition)
         $panelResults.Controls.Add($lblAmount)
@@ -979,10 +1053,11 @@ $btnCheckSelected.Add_Click({
         # Thaw details
         $batchNum = 1
         foreach ($detail in $result.Details) {
+            $batchUSD = [math]::Round($detail.Amount * $nightPrice, 2)
             $lblDetail = New-Object System.Windows.Forms.Label
             $lblDetail.Font = New-Object System.Drawing.Font("Segoe UI", 8)
             $lblDetail.ForeColor = [System.Drawing.Color]::Gray
-            $lblDetail.Text = "      Batch $batchNum`: $($detail.Amount.ToString("N0")) NIGHT - $($detail.Date)"
+            $lblDetail.Text = "      Batch $batchNum`: $($detail.Amount.ToString("N0")) NIGHT ≈ `$$batchUSD USD - $($detail.Date)"
             $lblDetail.Size = New-Object System.Drawing.Size(730, 16)
             $lblDetail.Location = New-Object System.Drawing.Point(10, $yPosition)
             $panelResults.Controls.Add($lblDetail)
@@ -1077,4 +1152,17 @@ function Show-TrademarkPopup {
 
 # Show trademark popup, then main form
 Show-TrademarkPopup
+
+# Start price ticker timer
+$timerPrice.Start()
+
+# Fetch initial prices before showing form
+$prices = Get-OKXPrices
+if ($prices) {
+    $lblPriceTicker.Text = Format-PriceDisplay -prices $prices
+}
+
 $form.ShowDialog() | Out-Null
+
+# Stop timer when form closes
+$timerPrice.Stop()
